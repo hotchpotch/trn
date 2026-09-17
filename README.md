@@ -142,6 +142,61 @@ trn --to en "こんにちは、世界！"
 #=> Hello, world!
 ```
 
+## List Languages
+
+List supported languages as JSON (no text input or language downloads required):
+
+```sh
+trn --list-languages | jq .
+trn --list-languages --quality high | jq '.languages[] | {code, name}'
+```
+
+Add `--to` to check readiness for translation from each listed language to that target:
+
+```sh
+trn --list-languages --to en --quality low | jq .
+trn --list-languages --to en --quality high \
+  | jq '.languages[] | select(.status == "installed")'
+```
+
+The JSON object contains `quality` and `languages`; `target` is included only with `--to`.
+Each language has `code` and an English `name`, sorted by code. With `--to`, each entry also has a `status`:
+
+| Status | Meaning |
+| --- | --- |
+| `installed` | The source → target pair is ready with the requested quality strategy. |
+| `supported` | The pair is supported, but required language assets are not installed. |
+| `unsupported` | The framework does not support this pair, including unsupported script pairings. |
+| `same_language` | Source and target have the same language and effective script; trn returns the original text without translation. |
+| `unknown` | The framework returned an unrecognized status. |
+
+Status describes a **language pair**, not whether a single language pack is downloaded.
+`same_language` describes trn's passthrough behavior; it does not indicate that any
+assets are installed or that the framework supports the pair.
+The list contains the languages reported by the device for the selected strategy,
+not every accepted input code or alias. For example, `ar` and `arabic` are accepted
+although the list reports `ar-AE`.
+Lists and readiness depend on the device and `--quality` (`low` by default).
+`high` prefers Apple Intelligence models and can fall back to traditional models;
+`installed` does not identify which model will be used.
+Language codes preserve region and script distinctions, such as `en-GB` and `zh-TW`.
+Accepted code syntax is `language[-Script][-REGION]`: a two- or three-letter language,
+an optional four-letter script, and an optional two-letter or three-digit region.
+Underscores and case differences are normalized. Malformed codes are errors; well-formed
+codes for unsupported languages produce `unsupported` pair statuses.
+The undetermined language code `und` (including region variants) is rejected.
+Region variants with the same effective script (such as `en-GB` → `en` or `ar-AE` → `ar`)
+are treated as `same_language` in both listing and translation. Different scripts
+(such as `zh` → `zh-TW`) still go through the framework's availability check.
+Use `trn --list-languages --help` to display help.
+Listing ignores stdin and rejects translation-only options such as `--from` and `--stream`.
+
+Compatibility note: translation now preserves non-default regions too. Previously,
+`--to en-GB` was reduced to `en`; it now requests the British English variant and may
+require different assets. Install the requested variant, or explicitly choose `--to en`
+if the base language is acceptable. Default-region forms such as `en-US` and `ja-JP`
+continue to normalize to `en` and `ja`.
+
 ## Buffered Translation
 
 Buffered paragraph translation is the default. `trn` splits input on newlines and keeps each chunk at or below 512 characters when possible. The `-s` / `--stream` flag is still accepted for clarity and backward compatibility, but it is not required.

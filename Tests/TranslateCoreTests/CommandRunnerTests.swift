@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import TranslateCore
 
@@ -50,6 +51,19 @@ struct CommandRunnerTests {
         #expect(result == CommandResult(output: "Hello\n", errorOutput: "", exitCode: 0))
     }
 
+    @Test("preserves region codes and high quality in translation requests")
+    func preservesRegionCodes() async {
+        let translator = RecordingTranslator { request in
+            #expect(request.sourceLanguageCode == "en-GB")
+            #expect(request.targetLanguageCode == "zh-TW")
+            #expect(request.quality == .high)
+            return TranslationResult(sourceLanguageCode: request.sourceLanguageCode, targetLanguageCode: request.targetLanguageCode, sourceText: request.sourceText, targetText: "translated")
+        }
+        let result = await CommandRunner(translator: translator).run(arguments: ["--from", "en-GB", "--to", "zh-TW", "-q", "high", "hello"], stdin: nil)
+        #expect(result.output == "translated\n")
+        #expect(result.exitCode == 0)
+    }
+
     @Test("returns usage on failure")
     func returnsUsageOnFailure() async {
         let runner = CommandRunner(translator: MockTranslator())
@@ -90,6 +104,30 @@ struct CommandRunnerTests {
         let result = await runner.run(arguments: ["--to", "en", "hello"], stdin: nil)
 
         #expect(result == CommandResult(output: "hello\n", errorOutput: "", exitCode: 0))
+    }
+
+    @Test("same-language region variants return the original text")
+    func regionVariantsPassThrough() async {
+        let translator = RecordingTranslator { _ in
+            Issue.record("Same language must not call translator")
+            throw CancellationError()
+        }
+        for (source, target) in [("en-GB", "en"), ("ar-AE", "ar")] {
+            let result = await CommandRunner(translator: translator).run(arguments: ["--from", source, "--to", target, "hello"], stdin: nil)
+            #expect(result.output == "hello\n")
+            #expect(result.exitCode == 0)
+        }
+    }
+
+    @Test("different Chinese scripts still call the translator")
+    func distinctScriptsTranslate() async {
+        let translator = RecordingTranslator { request in
+            #expect(request.sourceLanguageCode == "zh")
+            #expect(request.targetLanguageCode == "zh-TW")
+            return TranslationResult(sourceLanguageCode: "zh", targetLanguageCode: "zh-TW", sourceText: request.sourceText, targetText: "translated")
+        }
+        let result = await CommandRunner(translator: translator).run(arguments: ["--from", "zh", "--to", "zh-TW", "hello"], stdin: nil)
+        #expect(result.output == "translated\n")
     }
 
     @Test("streams chunks concurrently while preserving output order")

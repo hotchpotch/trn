@@ -59,6 +59,14 @@ public struct LanguageResolver: Sendable {
         return try resolve(detected.rawValue)
     }
 
+    // Region variants share a language only when their effective scripts also match.
+    func isSameLanguage(_ source: String, _ target: String) -> Bool {
+        let sourceLanguage = Locale.Language(identifier: source)
+        let targetLanguage = Locale.Language(identifier: target)
+        return sourceLanguage.languageCode == targetLanguage.languageCode
+            && sourceLanguage.script == targetLanguage.script
+    }
+
     private func resolve(_ language: String) throws -> String {
         let normalized = language
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -69,9 +77,14 @@ public struct LanguageResolver: Sendable {
             return alias
         }
 
-        let parts = normalized.split(separator: "-")
-        if let first = parts.first, first.count == 2 || first.count == 3 {
-            return String(first)
+        // Accept language[-Script][-REGION], including numeric UN M49 regions.
+        // Validate before Foundation normalization, which can silently discard malformed text.
+        if normalized.range(of: "^[a-z]{2,3}(-[a-z]{4})?(-([a-z]{2}|[0-9]{3}))?$", options: .regularExpression) != nil {
+            let candidate = Locale.Language(identifier: normalized)
+            guard candidate.languageCode?.identifier != "und" else {
+                throw LanguageResolverError.unsupportedLanguage(language)
+            }
+            return candidate.minimalIdentifier
         }
 
         throw LanguageResolverError.unsupportedLanguage(language)

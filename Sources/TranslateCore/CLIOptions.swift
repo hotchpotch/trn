@@ -37,6 +37,7 @@ public enum CLICommand: Equatable, Sendable {
     case help
     case version
     case translate(CLIOptions)
+    case listLanguages(LanguageListOptions)
 }
 
 public enum CLIParseError: Error, Equatable, CustomStringConvertible {
@@ -66,6 +67,9 @@ public struct CLIParser: Sendable {
     public init() {}
 
     public func parseCommand(_ arguments: [String]) throws -> CLICommand {
+        if arguments.contains("--help") || (arguments.contains("--list-languages") && arguments.contains("-h")) {
+            return .help
+        }
         if arguments.count == 1 {
             switch arguments[0] {
             case "-h", "--help":
@@ -77,7 +81,34 @@ public struct CLIParser: Sendable {
             }
         }
 
+        if arguments.contains("--list-languages") {
+            return .listLanguages(try parseLanguageList(arguments))
+        }
         return .translate(try parse(arguments))
+    }
+
+    private func parseLanguageList(_ arguments: [String]) throws -> LanguageListOptions {
+        var target: String?
+        var quality = TranslationQuality.low
+        var index = 0
+        while index < arguments.count {
+            let argument = arguments[index]
+            switch argument {
+            case "--list-languages":
+                index += 1
+            case "--to":
+                target = try value(after: argument, in: arguments, index: &index)
+            case "-q", "--quality":
+                let raw = try value(after: argument, in: arguments, index: &index)
+                guard let parsed = TranslationQuality(rawValue: raw.lowercased()) else {
+                    throw CLIParseError.invalidValue(argument, raw)
+                }
+                quality = parsed
+            default:
+                throw CLIParseError.unknownOption(argument)
+            }
+        }
+        return LanguageListOptions(targetLanguage: target, quality: quality)
     }
 
     public func parse(_ arguments: [String]) throws -> CLIOptions {
@@ -152,7 +183,7 @@ public struct CLIParser: Sendable {
             throw CLIParseError.missingValue(option)
         }
         let value = arguments[valueIndex]
-        guard !value.hasPrefix("--") else {
+        guard !value.hasPrefix("-") else {
             throw CLIParseError.missingValue(option)
         }
         index += 2
@@ -166,7 +197,12 @@ public let versionOutput = "trn \(trnVersion)\n"
 public let usage = """
 usage: trn --to <language> [--from <language>] [-q|--quality <high|low>] [-s|--stream] [-j|--concurrency <count>] [-b|--buffer-size <characters>] [text]
 
+  trn --list-languages [--to <language>] [-q|--quality <high|low>]
+
+Language listings are JSON. With --to, status describes each source -> target pair.
+
 examples:
+  trn --list-languages --to en --quality high
   trn --to en "こんにちは"
   trn --to en --quality high "こんにちは"
   trn --to en --quality low "こんにちは"
