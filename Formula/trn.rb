@@ -1,14 +1,14 @@
 class Trn < Formula
   desc "Swift command-line translator for macOS using Apple's Translation framework"
   homepage "https://github.com/hotchpotch/trn"
-  url "https://github.com/hotchpotch/trn/archive/refs/tags/v0.2.0.tar.gz"
-  sha256 "9831c10c6e9ccf6be746fc5aaca540944a652f5b9af59a02d5038cb3e9802f2f"
+  url "https://github.com/hotchpotch/trn/archive/refs/tags/v0.2.1.tar.gz"
+  sha256 "4b18b86a76a067e1fbb227d38a51d440c52a35315a3e1a79bb5ff58e4cbf0ac1"
   license "MIT"
 
   bottle do
-    root_url "https://github.com/hotchpotch/trn/releases/download/v0.2.0"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "962e5d97d0e1af1f62e89e8914ac3505f270496c2a60a44af3d66ab273211e78"
-    sha256 cellar: :any_skip_relocation, tahoe:       "b6d49e9db51d774f7ed9152a5eb3da072bebb250ac0819ea14eba2ae7973d69c"
+    root_url "https://github.com/hotchpotch/trn/releases/download/v0.2.1"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "30335b4e3f434bb7a87f3b0f7e1dbf70bbc1c76cc67a6e04c9e7d044c93c9ece"
+    sha256 cellar: :any_skip_relocation, tahoe:       "b9d36a7a6c5764f9b44f3d0be5b45bff8083298c0d5afb456e3a2df7803009fc"
   end
 
   depends_on macos: :tahoe
