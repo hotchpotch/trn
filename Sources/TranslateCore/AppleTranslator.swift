@@ -54,7 +54,7 @@ public struct AppleTranslator: TextTranslating {
     }
 }
 
-private extension TranslationSession.Strategy {
+extension TranslationSession.Strategy {
     init(quality: TranslationQuality) {
         switch quality {
         case .high:

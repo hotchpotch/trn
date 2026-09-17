@@ -19,17 +19,20 @@ public struct CommandRunner<Translator: TextTranslating>: Sendable {
     private let inputResolver: InputResolver
     private let languageResolver: LanguageResolver
     private let translator: Translator
+    private let languageAvailability: any LanguageAvailabilityProviding
 
     public init(
         parser: CLIParser = CLIParser(),
         inputResolver: InputResolver = InputResolver(),
         languageResolver: LanguageResolver = LanguageResolver(),
-        translator: Translator
+        translator: Translator,
+        languageAvailability: any LanguageAvailabilityProviding = AppleLanguageAvailability()
     ) {
         self.parser = parser
         self.inputResolver = inputResolver
         self.languageResolver = languageResolver
         self.translator = translator
+        self.languageAvailability = languageAvailability
     }
 
     public func run(arguments: [String], stdin: String?) async -> CommandResult {
@@ -53,6 +56,9 @@ public struct CommandRunner<Translator: TextTranslating>: Sendable {
                 return CommandResult(output: helpOutput, errorOutput: "", exitCode: 0)
             case .version:
                 return CommandResult(output: versionOutput, errorOutput: "", exitCode: 0)
+            case let .listLanguages(options):
+                let output = try await LanguageListing(provider: languageAvailability, resolver: languageResolver).json(options: options)
+                return CommandResult(output: output, errorOutput: "", exitCode: 0)
             case let .translate(options):
                 return try await runTranslation(options: options, stdin: stdin, emit: emit)
             }
@@ -75,7 +81,7 @@ public struct CommandRunner<Translator: TextTranslating>: Sendable {
             targetLanguageCode: try languageResolver.resolveTarget(options.targetLanguage),
             quality: options.quality
         )
-        guard request.sourceLanguageCode != request.targetLanguageCode else {
+        guard !languageResolver.isSameLanguage(request.sourceLanguageCode, request.targetLanguageCode) else {
             return CommandResult(output: text + "\n", errorOutput: "", exitCode: 0)
         }
 
@@ -144,7 +150,7 @@ public struct CommandRunner<Translator: TextTranslating>: Sendable {
             return IndexedStreamOutput(index: segment.index, output: segment.outputSuffix)
         }
 
-        guard sourceLanguageCode != targetLanguageCode else {
+        guard !languageResolver.isSameLanguage(sourceLanguageCode, targetLanguageCode) else {
             return IndexedStreamOutput(index: segment.index, output: segment.sourceText + segment.outputSuffix)
         }
 
