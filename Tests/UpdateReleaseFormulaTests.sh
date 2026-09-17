@@ -25,4 +25,6 @@ fi
 
 grep -Fq "depends_on macos: :tahoe" "$formula_path"
 
+ruby -e 'abort "Consecutive blank lines after bottle removal" if File.read(ARGV.fetch(0)).include?("\n\n\n")' "$formula_path"
+
 echo "Release formula update tests passed."

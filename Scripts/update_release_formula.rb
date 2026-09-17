@@ -14,7 +14,7 @@ contents = formula_path.read
 
 # A bottle block belongs to the previous stable release. The release workflow
 # generates a fresh block after building the new bottles.
-contents.sub!(/\n  bottle do\n.*?^  end\n/m, "\n")
+contents.sub!(/\n  bottle do\n.*?^  end\n/m, "")
 
 archive_url = "https://github.com/hotchpotch/trn/archive/refs/tags/v#{version}.tar.gz"
 url_count = contents.scan(/^  url ".*"$/).count
