@@ -191,7 +191,7 @@ public struct CLIParser: Sendable {
     }
 }
 
-public let trnVersion = "0.2.0"
+public let trnVersion = "0.2.1"
 public let versionOutput = "trn \(trnVersion)\n"
 
 public let usage = """
